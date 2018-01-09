@@ -284,9 +284,9 @@ to go
   ; reinitialise la liste des deplacements
   ask turtles [ set fd-ok? true ]
   ; si plus de bases rouges, victoire des verts
-  if not any? Bases with [ color = red ][ print "Victoire des verts" set victoire 1 stop ]
+  if not any? Bases with [ color = red ][ print "Victoire des verts" set victoire 1 game-over ]
   ; si plus de base verte, victoire des rouges
-  if not any? Bases with [ color = green ][ print "Victoire des rouges" set victoire 2 stop ]
+  if not any? Bases with [ color = green ][ print "Victoire des rouges" set victoire 2 game-over ]
 
   ; pour tous les explorers
   ask Explorers [
@@ -380,7 +380,19 @@ to go
   ; met à jour l'affichage des ressources globales des 2 equipes
   update_energy_watches
   tick
-  if (ticks = duree) [ stop ]
+  ;if (ticks = duree) [ stop ]
+  if (ticks = duree) [ game-over ]
+end
+
+to game-over
+  ifelse (compute-energy red > compute-energy blue and compute-energy red > compute-energy green)
+  [
+    print ("Victoire")
+  ]
+  [
+    print("Défaite")
+  ]
+  setup 1
 end
 
 to-report compute-energy [ c ]

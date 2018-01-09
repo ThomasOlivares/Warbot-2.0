@@ -26,9 +26,21 @@ to green-go-back-to-base
       ;; demande de l'énergie si il reste moins de 1000
       if (energy < 1000) [ green-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
-      if ((Breed = RocketLaunchers) and (nb-missiles = 0)) [
+      if (Breed = RocketLaunchers) [
+        if ([energy] of b <= 1000)[
+          green-ask-for-energy b 200
+        ]
+        if([energy] of b > 1000)[
+          green-ask-for-energy b 500
+        ]
+        if (nb-missiles = 0)
+        [
+          new-missile 5
+        ]
+      ]
+      if ((Breed = RocketLaunchers) and (nb-fafs = 0)) [
         green-ask-for-energy b 500
-        new-missile 5
+        new-faf 3
       ]
       set mem4 0
       ;; fait demi-tour
@@ -145,22 +157,25 @@ to green-select-target
   ]
 end
 
-to green-dodge
-  let x 0
-  let y 0
-  if ([Breed] of mem0 = RocketLaunchers)
-  [
-    set x [xcor] of mem0
-    set y [ycor] of mem0
-    rt 90
-    forward-move speed
+to-report green-dodge
+  without-interruption [
+    ifelse (mem4 = 1 or Breed != RocketLaunchers or mem0 = nobody)[
+    ]
+    [
+      if ([Breed] of mem0 = RocketLaunchers)
+      [
+        set heading towards mem0
+        rt 90
+        forward-move speed
+      ]
+    ]
   ]
-  
+  report 0
 end
 
 to green-shoot 
   if (mem0 != nobody)[
-    if (not durandil-no-target?)
+    if (not green-no-target?)
     [
       ifelse (mem5 = 1)
       [ 
@@ -222,7 +237,10 @@ to goGreenRocketLauncher
     ;; si pas de cible, cherche à manger
     [ green-go-and-eat ]
     ;; sinon tire
-    [ green-shoot ]
+    [ 
+      green-shoot 
+      ;let dummy green-dodge
+    ]
   ]
   
   ;; crée un nouveau missile si plus de 3000 unités d'énergie
