@@ -1350,7 +1350,7 @@ CHOOSER
 display?
 display?
 "none" "energy" "missiles" "carrying-food?" "mem0" "mem1" "mem2" "mem3" "mem4" "mem5"
-8
+5
 
 MONITOR
 107
@@ -1502,17 +1502,6 @@ MONITOR
 620
 BH
 count Harvesters with [color = blue]
-17
-1
-11
-
-MONITOR
-576
-570
-633
-615
-RH2
-count Harvesters with [color = red and mem4 = 2]
 17
 1
 11

@@ -379,9 +379,16 @@ to goGreenHarvester
   ]
   ifelse (mem4 = 1) 
   [
-   
+   ;; si la base de back a été détruite
+  if ( mem1 = nobody ) [ 
+    ;; détermine la base la plus proche
+    set mem1 min-one-of my-bases [ distance myself ]
+    if (Breed = Harvesters and who mod 7 = 0) [ 
+      set mem1 max-one-of my-bases [ distance myself ] 
+   ] 
+  ]
     ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
-    if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
+    if (distance mem1 < 10) and (carrying-food? > 300) [ 
       green-plant-seeds
     ]
     

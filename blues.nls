@@ -1,156 +1,449 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;
-;; le code de l'equipe bleue basique
-;; préfixe : blue-team
+;; le code de l'equipe verte basique
+;; préfixe : Blue
 ;;
+;; item 0 mem0 et item 1 mem0 : coordonnees d'une cible
+;; mem5 : indique si le robot a ou non une cible sélectionnée
+;; mem4 : indique si un harvester est en mode retour à la base
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-to blue-team-ask-for-energy [ b n ]
-  ask b [ if (energy > 6000) [ give-energy myself n ]]
+to Blue-ask-for-energy [ b n ]
+  ask b [ if (energy > 1000) [ give-energy myself n ]]
 end
 
-to blue-team-go-back-to-base
-  if (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
-  [
-    let b min-one-of my-bases [ distance myself ]
-    ifelse (distance b <= 2)
+to-report Blue-number-agent-in-range
+  report count perceive-robots friend
+end
+
+to Blue-plant-seeds
+  ;; plante une graine
+  plant-seeds color max-seeds
+  ;; détermine la base la plus proche
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
     [ 
-      if (carrying-food? > 1000) [ give-food b carrying-food? ]
-      if (energy < 500) [ blue-team-ask-for-energy b 500 ]
-      if ((Breed = RocketLaunchers) and (nb-missiles = 0)) [
-        blue-team-ask-for-energy b 500
-        new-missile 5
-      ]
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ Blue-ask-for-energy b 300 ]
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
     ]
+  ;; sinon
     [
-      set heading towards b - 20 + random 40
-      if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
-      forward-move speed
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 60 + random 120
+      ;; turtle will orbit left or right, depending on its id
+      if ( who mod 7 = 1 or who mod 7 = 2 ) [ lt 30 ]
+      if ( who mod 7 = 4 or who mod 7 = 5 ) [ rt 30 ]  
+      
+     
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
-  ]
+  
 end
 
-to blue-team-go-and-eat
+to Blue-harvester-go-back-to-base
+   ;; détermine la base a atteindre
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ Blue-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
+end
+
+;;
+;; rentre à la base si le robot transporte plus de 1000 unités de nourriture ou si son énergie est inférieure à 500 ou si c'est un rocket-launcher qui n'a plus de missiles
+;;
+to Blue-go-back-to-base
+  ;; détermine la base la plus proche
+  let b min-one-of my-bases [ distance myself ]
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ Blue-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      if (Breed = RocketLaunchers) [
+        Blue-ask-for-energy b 500
+        if (nb-missiles = 0)
+        [
+          Blue-ask-for-energy b 50
+          new-missile 50
+        ]
+        if (nb-fafs = 0)
+        [
+          Blue-ask-for-energy b 250
+          new-faf 5
+        ]
+      ]
+      if (mem4 = 2) [Blue-ask-for-energy b 1000]
+      if (mem4 != 2)[ set mem4 0 ]
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
+end
+
+to Blue-go-and-eat
   if ((breed = RocketLaunchers and (mem5 = 0)) or (breed = Explorers)) [
     random-move
   ]
 end
 
-to blue-team-harvesters-go-and-eat
-  let b min-one-of perceive-food [ distance self ]
+to Blue-harvesters-go-and-eat
+  let b min-one-of perceive-food [ distance myself ]
   ifelse (b != nobody) [ 
     ifelse (distance b) <= 2
       [ take b ]
       [ set heading towards b - 20 + random 40
-        if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
-        forward-move speed
+      ifelse (free-ahead? speed = nobody) [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
       ]
   ]
-  [ random-move ]
-end
-
-to-report blue-team-no-target?
-  report mem5 = 0
-end
-
-to blue-team-set-target [ x y espece ]
-  set mem0 x set mem1 y set mem2 espece set mem5 1
-end
-
-to blue-team-call-rocket-launcher [ x y espece ]
-  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distancexy x y ]
-  if (rl != nobody) [ ask rl [ blue-team-set-target x y espece ]]
-end
-
-to blue-team-call-explorer [ x y espece ]
-  let ex one-of perceive-specific-robots color Explorers
-  if (ex != nobody) [
-    ask ex [
-      set mem0 x 
-      set mem1 y
-      set mem2 espece
-      set mem5 1
+  [
+    ifelse (mem5 = 1)
+    [ 
+      ifelse (distancexy item 0 mem0 item 1 mem0 > 1)
+      [
+        set heading towardsxy item 0 mem0 item 1 mem0
+        ifelse (free-ahead? speed = nobody) [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+      ]
+      [ set mem5 0 ]
     ]
+    [ random-move ]
   ]
 end
 
-to blue-team-select-target
-  if (blue-team-no-target?)
+;;
+;; la mémoire mem5 est à
+;; - 0 si le robot n'a pas de cible sélectionnée
+;; - 1 si le robot a une cible sélectionnée
+;;
+to-report Blue-no-target?
+  report mem5 <= 0
+end
+
+to Blue-set-target-xy [ x y espece ]
+  set mem0 replace-item 0 mem0 x 
+  set mem0 replace-item 1 mem0 y 
+  set mem2 espece 
+  set mem5 1
+end
+
+to Blue-set-target-t [ t espece ]
+  set mem0 t 
+  set mem2 espece 
+  set mem5 2
+end
+
+to Blue-set-food-target [ x y ]
+  if (Blue-no-target?) 
+  [ 
+    set mem0 replace-item 0 mem0 x 
+    set mem0 replace-item 1 mem0 y 
+    set mem5 1 
+  ] 
+end
+
+to Blue-call-rocket-launcher-xy [ x y espece ]
+  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distancexy x y ]
+  if (rl != nobody) [ ask rl [ Blue-set-target-xy x y espece ]]
+end
+
+to Blue-call-rocket-launcher-t [ t espece ]
+  let rl min-one-of perceive-specific-robots color RocketLaunchers [ distancexy [xcor] of t [ycor] of t ]
+  if (rl != nobody) [ ask rl [ Blue-set-target-t t espece ]]
+end
+
+to Blue-call-explorer [ x y espece ]
+  let ex one-of perceive-specific-robots color Explorers
+  if (ex != nobody) [
+    ask ex [ Blue-set-target-xy x y espece ]
+  ]
+end
+
+to Blue-call-harvester [ x y ]
+  let h min-one-of perceive-specific-robots color harvesters [ distancexy x y ]
+  if (h != nobody) [ ask h [ Blue-set-food-target x y ]]
+end
+
+;;
+;; essaye de sélectionner une cible à viser
+;;
+to Blue-select-target
+  ;; si le robot n'a pas une base adverse comme cible
+  if (Blue-no-target?)
   [
+    ;; il essaye de percevoir un robot ennemi (le plus proche de lui)
     let h min-one-of perceive-robots2 ennemy1 ennemy2 [ distance myself ]
+    ;; si il en a vu un, il mémorise ses coordonnées et vérouille la cible
     ifelse ( h != nobody ) [
-      set mem0 [xcor] of h
-      set mem1 [ycor] of h
+      set mem0  h
       set mem2 [breed] of h
-      set mem5 1
+      set mem5 2
     ]
+    ;; sinon, il se dévérouille
     [ set mem5 0 ]
   ]
 end
 
-to blue-team-shoot 
-  if (not blue-team-no-target?) 
-  [
-    ifelse (distancexy mem0 mem1 < detection-range)
-    [ launch-rocket towardsxy mem0 mem1 set mem5 0]
-    [ set heading towardsxy mem0 mem1 - 20 + random 40
-      if count turtles in-cone 2 90 with [ (breed != Burgers) and (breed != Perceptions) ] != 1 [ rt random 90 ]
-      forward-move speed
+to-report Blue-dodge
+  without-interruption [
+    ifelse (mem4 = 1 or Breed != RocketLaunchers or mem0 = nobody)[
+    ]
+    [
+      if ([Breed] of mem0 = RocketLaunchers)
+      [
+        set heading towards mem0
+        rt 90
+        forward-move speed
+      ]
     ]
   ]
-  
+  report 0
+end
+
+to Blue-shoot 
+  if (mem0 != nobody)[
+    if (not Blue-no-target?)
+    [
+      ifelse (mem5 = 1)
+      [ 
+        launch-rocket towardsxy item 0 mem0 item 1 mem0 
+        set mem5 0 
+      ]
+      [ 
+        ifelse ((nb-fafs > 0) and (waiting = 0) and (mem0 != nobody))
+        [
+          launch-faf mem0
+        ]
+        [
+          if (mem0 != nobody)
+          [
+            launch-rocket towards mem0
+          ]
+        ]
+        set mem5 0 
+      ]
+    ]
+  ]
+end
+
+to Blue-drive-harvesters
+  let food one-of perceive-food
+  if (food != nobody) [
+    Blue-call-harvester [xcor] of food [ycor] of food 
+  ]
+end
+
+to Blue-safe-move
+  let done false
+  let c 0
+  while ([done = false and c < 360])
+  [
+    ifelse (free-ahead? speed = nobody) 
+    [
+      forward-move speed
+      set done true
+    ]
+    [
+      rt 10
+      set c c + 10
+    ]
+  ]
+end
+
+to Blue-init-target-explorer
+  let x 0
+  let y 0
+  if ([xcor] of one-of my-bases = 0)
+  [
+    ifelse (random 2 = 0)
+    [set x -40]
+    [set x 40]
+    ifelse (random 2 = 0)
+    [set y -10]
+    [set y 10]
+  ]
+  set mem0 [0 0]
+  set mem0 replace-item 0 mem0 x 
+  set mem0 replace-item 1 mem0 y
+end
+
+; the explorer go turn around the ennemy base
+to Blue-go-say-hello
+  if (distancexy item 0 mem0 item 1 mem0 > 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    Blue-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 <= 5)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 135
+    Blue-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 > 5 and distancexy item 0 mem0 item 1 mem0 <= 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 90
+    Blue-safe-move
+  ]
 end
 
 to goBlueExplorer
-  blue-team-go-back-to-base
-  blue-team-go-and-eat
+  ifelse (energy < 500)
+  [ Blue-go-back-to-base ]
+  [ 
+    ifelse(mem4 = 2)
+    [
+      Blue-go-say-hello
+    ]
+    [Blue-go-and-eat ]
+  ]
+  Blue-drive-harvesters
 
-  ifelse (not blue-team-no-target?) [
-    blue-team-call-rocket-launcher mem0 mem1 mem2
-    blue-team-call-explorer mem0 mem1 mem2
+  ifelse (not Blue-no-target?) [
+    Blue-call-rocket-launcher-xy item 0 mem0 item 1 mem0 mem2
+    Blue-call-explorer item 0 mem0 item 1 mem0 mem2
   ]
   [ let h one-of perceive-robots2 ennemy1 ennemy2
-    if ( h != nobody ) [ blue-team-call-rocket-launcher [xcor] of h [ycor] of h [breed] of h]
+    if ( h != nobody ) [ Blue-call-rocket-launcher-t h [breed] of h]
   ]
 end
 
 to goBlueRocketLauncher
-  blue-team-go-back-to-base
-  blue-team-select-target
-  blue-team-shoot
-  blue-team-go-and-eat
-
-  if ((energy > 3000) and (nb-missiles < 5)) [ new-missile 1 ]
+;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
+  ifelse (energy < 500) or (nb-missiles = 0)
+  [
+    ;; rentre à la base si certaines conditions sont vérifiées
+    
+    Blue-go-back-to-base
+  ]
+  [
+    ;; sinon sélectionne une cible
+    Blue-select-target
+    ifelse (Blue-no-target?)
+    ;; si pas de cible, cherche à manger
+    [ Blue-go-and-eat ]
+    ;; sinon tire
+    [ 
+      Blue-shoot 
+      ;let dummy Blue-dodge
+    ]
+  ]
+  
+  ;; crée un nouveau missile si plus de 3000 unités d'énergie
+  if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
 end
 
 to goBlueHarvester
-  ;; rentre à la base si certaines conditions sont vérifiées
-  blue-team-go-back-to-base
-  ;; cherche à manger
-  blue-team-harvesters-go-and-eat
+  ;; le harvester doit il back ? 
+  if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
+   ; retour à la base
+    set mem4 1
+    ;; détermine la base la plus proche
+    set mem1 min-one-of my-bases [ distance myself ]
+    ;; si l'ID mod 7 du harvester est 0, il rentre à la base la plus eloignée afin d'équilibrer un peu
+    if (Breed = Harvesters and who mod 7 = 0) [ 
+      set mem1 max-one-of my-bases [ distance myself ] 
+    ]
+  ]
+  ifelse (mem4 = 1) 
+  [
+   
+    ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
+    if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
+      Blue-plant-seeds
+    ]
+    
+    ;; rentre à la base si certaines conditions sont vérifiées
+    Blue-harvester-go-back-to-base
+    if (energy > 500) and (carrying-food? > 500) [ 
+      ;; détermine la distance de la base la plus proche
+      if (min [ distance myself ] of my-bases < 10) [
+        plant-seeds color max-seeds
+      ]
+    ]
+  ]
+  [
+    ;; cherche à manger
+    Blue-harvesters-go-and-eat
+  ]
 end
 
 to goBlueBase
   set label energy
-  if (energy > 12000) [ new-RocketLauncher 1 self ]
+  if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
+  if (energy > 12000) [ 
+    ifelse (random 5 = 0) 
+    [new-Explorer 1 self]
+    [
+      ifelse (random 2 = 0) 
+      [ new-Harvester 1 self ]
+      [ new-RocketLauncher 1 self ]
+    ]
+  ]
   let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
   if (t != nobody) [
-    launch-rocket towards t
+    if (random 10 = 0) [launch-rocket towards t]
   ]
 end
 
-;; procedure pour initialiser les explorers rouges
+;; procedure pour initialiser les explorers verts
 to initBlueExplorer
+  set mem0 [0 0]
+  ifelse (random 4 = 0)
+  [
+    set mem4 2 
+    Blue-init-target-explorer
+  ]
+  [set mem4 0]
 end
 
-;; procedure pour initialiser les rocket-launchers rouges
+;; procedure pour initialiser les rocket-launchers verts
 to initBlueRocketLauncher
+  set mem0 [0 0]
 end
 
-;; procedure pour initialiser les rocket-launchers rouges
+;; procedure pour initialiser les harvesters verts
 to initBlueHarvester
+  set mem0 [0 0]
 end
 
-;; procedure pour initialiser les bases rouges
+;; procedure pour initialiser les bases verts
 to initBlueBase
+  set mem0 [0 0]
+  ; cré des explorers, des harvesters et des rocket-launchers
+  new-Explorer 2 self
+  new-Harvester 5 self
+  new-RocketLauncher 2 self
 end
