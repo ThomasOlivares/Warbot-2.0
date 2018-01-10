@@ -17,7 +17,6 @@ to-report durandil-number-agent-in-range
 end
 
 to durandil-plant-seeds
-  
   ;; plante une graine
   plant-seeds color max-seeds
   ;; détermine la base la plus proche
@@ -25,12 +24,10 @@ to durandil-plant-seeds
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
-
       ;; dépose sa nourriture
       give-food b carrying-food?
       ;; demande de l'énergie si il reste moins de 1000
       if (energy < 1000) [ durandil-ask-for-energy b 300 ]
-
       set mem4 0
       ;; fait demi-tour
       rt 180
@@ -61,20 +58,17 @@ to durandil-go-back-to-base
       if (energy < 1000) [ durandil-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
       if (Breed = RocketLaunchers) [
-        if ([energy] of b <= 1000)[
-          green-ask-for-energy b 200
-        ]
-        if([energy] of b > 1000)[
-          green-ask-for-energy b 500
-        ]
+        durandil-ask-for-energy b 500
         if (nb-missiles = 0)
         [
-          new-missile 5
+          durandil-ask-for-energy b 50
+          new-missile 50
         ]
-      ]
-      if ((Breed = RocketLaunchers) and (nb-fafs = 0)) [
-        durandil-ask-for-energy b 500
-        new-faf 3
+        if (nb-fafs = 0)
+        [
+          durandil-ask-for-energy b 250
+          new-faf 5
+        ]
       ]
       set mem4 0
       ;; fait demi-tour
@@ -124,7 +118,7 @@ end
 ;; - 1 si le robot a une cible sélectionnée
 ;;
 to-report durandil-no-target?
-  report mem5 = 0
+  report mem5 <= 0
 end
 
 to durandil-set-target-xy [ x y espece ]
@@ -262,6 +256,7 @@ to goRedRocketLauncher
   ifelse (energy < 500) or (nb-missiles = 0)
   [
     ;; rentre à la base si certaines conditions sont vérifiées
+    
     durandil-go-back-to-base
   ]
   [
@@ -278,7 +273,7 @@ to goRedRocketLauncher
   ]
   
   ;; crée un nouveau missile si plus de 3000 unités d'énergie
-  if ((energy > 3000) and (nb-missiles < 5)) [ new-missile 1 ]
+  if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
 end
 
 to goRedHarvester
@@ -286,9 +281,6 @@ to goRedHarvester
   [
     ; retour à la base
     set mem4 1
-    
-    
-    
     ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
     if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
       durandil-plant-seeds
@@ -296,16 +288,12 @@ to goRedHarvester
     
     ;; rentre à la base si certaines conditions sont vérifiées
     durandil-go-back-to-base
-    
-    
     if (energy > 500) and (carrying-food? > 500) [ 
       ;; détermine la distance de la base la plus proche
       if (min [ distance myself ] of my-bases < 10) [
         plant-seeds color max-seeds
       ]
     ]
-    
-    
   ]
   [
     ;; cherche à manger
@@ -316,7 +304,15 @@ end
 to goRedBase
   set label energy
   if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
-  if (energy > 12000) [ ifelse (random 5 = 0) [ new-Explorer 1 self ][ifelse (random 2 = 0) [ new-Harvester 1 self ][ new-RocketLauncher 1 self ]]]
+  if (energy > 12000) [ 
+    ifelse (random 5 = 0) 
+    [new-Explorer 1 self]
+    [
+      ifelse (random 2 = 0) 
+      [ new-Harvester 1 self ]
+      [ new-RocketLauncher 1 self ]
+    ]
+  ]
   let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
     if (t != nobody) [
       if (random 10 = 0) [launch-rocket towards t]

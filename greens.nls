@@ -12,6 +12,40 @@ to green-ask-for-energy [ b n ]
   ask b [ if (energy > 1000) [ give-energy myself n ]]
 end
 
+to-report green-number-agent-in-range
+  report count perceive-robots friend
+end
+
+to green-plant-seeds
+  
+  ;; plante une graine
+  plant-seeds color max-seeds
+  ;; détermine la base la plus proche
+  let b min-one-of my-bases [ distance myself ]
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ green-ask-for-energy b 300 ]
+
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 60 + random 120
+      lt (25 - ( 50 * ( who mod 2) ) ) ;; turtle will orbit left or right, depending on its id
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
+  
+end
+
 ;;
 ;; rentre à la base si le robot transporte plus de 1000 unités de nourriture ou si son énergie est inférieure à 500 ou si c'est un rocket-launcher qui n'a plus de missiles
 ;;
@@ -27,20 +61,17 @@ to green-go-back-to-base
       if (energy < 1000) [ green-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
       if (Breed = RocketLaunchers) [
-        if ([energy] of b <= 1000)[
-          green-ask-for-energy b 200
-        ]
-        if([energy] of b > 1000)[
-          green-ask-for-energy b 500
-        ]
+        durandil-ask-for-energy b 500
         if (nb-missiles = 0)
         [
-          new-missile 5
+          durandil-ask-for-energy b 50
+          new-missile 50
         ]
-      ]
-      if ((Breed = RocketLaunchers) and (nb-fafs = 0)) [
-        green-ask-for-energy b 500
-        new-faf 3
+        if (nb-fafs = 0)
+        [
+          durandil-ask-for-energy b 250
+          new-faf 5
+        ]
       ]
       set mem4 0
       ;; fait demi-tour
@@ -252,14 +283,26 @@ to goGreenHarvester
   [
     ; retour à la base
     set mem4 1
+    
+    
+    
+    ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
+    if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
+      green-plant-seeds
+    ]
+    
     ;; rentre à la base si certaines conditions sont vérifiées
     green-go-back-to-base
+    
+    
     if (energy > 500) and (carrying-food? > 500) [ 
       ;; détermine la distance de la base la plus proche
       if (min [ distance myself ] of my-bases < 10) [
         plant-seeds color max-seeds
       ]
     ]
+    
+    
   ]
   [
     ;; cherche à manger
