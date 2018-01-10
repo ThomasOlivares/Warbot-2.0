@@ -20,7 +20,7 @@ to durandil-plant-seeds
   ;; plante une graine
   plant-seeds color max-seeds
   ;; détermine la base la plus proche
-  let b min-one-of my-bases [ distance myself ]
+  let b mem1
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
@@ -36,11 +36,40 @@ to durandil-plant-seeds
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 60 + random 120
-      lt (25 - ( 50 * ( who mod 2) ) ) ;; turtle will orbit left or right, depending on its id
+      ;; turtle will orbit left or right, depending on its id
+      if ( who mod 7 = 1 or who mod 7 = 2 ) [ lt 30 ]
+      if ( who mod 7 = 4 or who mod 7 = 5 ) [ rt 30 ]  
+      
+     
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
   
+end
+
+to durandil-harvester-go-back-to-base
+   ;; détermine la base a atteindre
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ durandil-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
 end
 
 ;;
@@ -70,7 +99,8 @@ to durandil-go-back-to-base
           new-faf 5
         ]
       ]
-      set mem4 0
+      if (mem4 = 2) [durandil-ask-for-energy b 1000]
+      if (mem4 != 2)[ set mem4 0 ]
       ;; fait demi-tour
       rt 180
     ]
@@ -234,12 +264,71 @@ to durandil-drive-harvesters
   ]
 end
 
+to durandil-safe-move
+  let done false
+  let c 0
+  while ([done = false and c < 360])
+  [
+    ifelse (free-ahead? speed = nobody) 
+    [
+      forward-move speed
+      set done true
+    ]
+    [
+      rt 10
+      set c c + 10
+    ]
+  ]
+end
+
+to durandil-init-target-explorer
+  let x 0
+  let y 0
+  if ([xcor] of one-of my-bases = 0)
+  [
+    ifelse (random 2 = 0)
+    [set x -40]
+    [set x 40]
+    ifelse (random 2 = 0)
+    [set y -10]
+    [set y 10]
+  ]
+  set mem0 [0 0]
+  set mem0 replace-item 0 mem0 x 
+  set mem0 replace-item 1 mem0 y
+end
+
+; the explorer go turn around the ennemy base
+to durandil-go-say-hello
+  if (distancexy item 0 mem0 item 1 mem0 > 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    durandil-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 <= 5)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 135
+    durandil-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 > 5 and distancexy item 0 mem0 item 1 mem0 <= 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 90
+    durandil-safe-move
+  ]
+end
+
 to goRedExplorer
-;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 500)
   [ durandil-go-back-to-base ]
-  [ durandil-go-and-eat ]
-  
+  [ 
+    ifelse(mem4 = 2)
+    [
+      durandil-go-say-hello
+    ]
+    [durandil-go-and-eat ]
+  ]
   durandil-drive-harvesters
 
   ifelse (not durandil-no-target?) [
@@ -277,17 +366,27 @@ to goRedRocketLauncher
 end
 
 to goRedHarvester
-  ifelse (mem4 = 1) or (carrying-food? > 500) or (energy < 500)
-  [
-    ; retour à la base
+  ;; le harvester doit il back ? 
+  if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
+   ; retour à la base
     set mem4 1
+    ;; détermine la base la plus proche
+    set mem1 min-one-of my-bases [ distance myself ]
+    ;; si l'ID mod 7 du harvester est 0, il rentre à la base la plus eloignée afin d'équilibrer un peu
+    if (Breed = Harvesters and who mod 7 = 0) [ 
+      set mem1 max-one-of my-bases [ distance myself ] 
+    ]
+  ]
+  ifelse (mem4 = 1) 
+  [
+   
     ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
     if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
       durandil-plant-seeds
     ]
     
     ;; rentre à la base si certaines conditions sont vérifiées
-    durandil-go-back-to-base
+    durandil-harvester-go-back-to-base
     if (energy > 500) and (carrying-food? > 500) [ 
       ;; détermine la distance de la base la plus proche
       if (min [ distance myself ] of my-bases < 10) [
@@ -314,14 +413,20 @@ to goRedBase
     ]
   ]
   let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
-    if (t != nobody) [
-      if (random 10 = 0) [launch-rocket towards t]
-    ]
+  if (t != nobody) [
+    if (random 10 = 0) [launch-rocket towards t]
+  ]
 end
 
 ;; procedure pour initialiser les explorers verts
 to initRedExplorer
   set mem0 [0 0]
+  ifelse (random 4 = 0)
+  [
+    set mem4 2 
+    durandil-init-target-explorer
+  ]
+  [set mem4 0]
 end
 
 ;; procedure pour initialiser les rocket-launchers verts

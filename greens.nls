@@ -17,20 +17,17 @@ to-report green-number-agent-in-range
 end
 
 to green-plant-seeds
-  
   ;; plante une graine
   plant-seeds color max-seeds
   ;; détermine la base la plus proche
-  let b min-one-of my-bases [ distance myself ]
+  let b mem1
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
-
       ;; dépose sa nourriture
       give-food b carrying-food?
       ;; demande de l'énergie si il reste moins de 1000
       if (energy < 1000) [ green-ask-for-energy b 300 ]
-
       set mem4 0
       ;; fait demi-tour
       rt 180
@@ -39,11 +36,40 @@ to green-plant-seeds
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 60 + random 120
-      lt (25 - ( 50 * ( who mod 2) ) ) ;; turtle will orbit left or right, depending on its id
+      ;; turtle will orbit left or right, depending on its id
+      if ( who mod 7 = 1 or who mod 7 = 2 ) [ lt 30 ]
+      if ( who mod 7 = 4 or who mod 7 = 5 ) [ rt 30 ]  
+      
+     
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
   
+end
+
+to green-harvester-go-back-to-base
+   ;; détermine la base a atteindre
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ green-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
 end
 
 ;;
@@ -61,19 +87,20 @@ to green-go-back-to-base
       if (energy < 1000) [ green-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
       if (Breed = RocketLaunchers) [
-        durandil-ask-for-energy b 500
+        green-ask-for-energy b 500
         if (nb-missiles = 0)
         [
-          durandil-ask-for-energy b 50
+          green-ask-for-energy b 50
           new-missile 50
         ]
         if (nb-fafs = 0)
         [
-          durandil-ask-for-energy b 250
+          green-ask-for-energy b 250
           new-faf 5
         ]
       ]
-      set mem4 0
+      if (mem4 = 2) [green-ask-for-energy b 1000]
+      if (mem4 != 2)[ set mem4 0 ]
       ;; fait demi-tour
       rt 180
     ]
@@ -121,7 +148,7 @@ end
 ;; - 1 si le robot a une cible sélectionnée
 ;;
 to-report green-no-target?
-  report mem5 = 0
+  report mem5 <= 0
 end
 
 to green-set-target-xy [ x y espece ]
@@ -237,12 +264,71 @@ to green-drive-harvesters
   ]
 end
 
+to green-safe-move
+  let done false
+  let c 0
+  while ([done = false and c < 360])
+  [
+    ifelse (free-ahead? speed = nobody) 
+    [
+      forward-move speed
+      set done true
+    ]
+    [
+      rt 10
+      set c c + 10
+    ]
+  ]
+end
+
+to green-init-target-explorer
+  let x 0
+  let y 0
+  if ([xcor] of one-of my-bases = 0)
+  [
+    ifelse (random 2 = 0)
+    [set x -40]
+    [set x 40]
+    ifelse (random 2 = 0)
+    [set y -10]
+    [set y 10]
+  ]
+  set mem0 [0 0]
+  set mem0 replace-item 0 mem0 x 
+  set mem0 replace-item 1 mem0 y
+end
+
+; the explorer go turn around the ennemy base
+to green-go-say-hello
+  if (distancexy item 0 mem0 item 1 mem0 > 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    green-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 <= 5)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 135
+    green-safe-move
+  ]
+  if (distancexy item 0 mem0 item 1 mem0 > 5 and distancexy item 0 mem0 item 1 mem0 <= 10)
+  [
+    set heading towardsxy item 0 mem0 item 1 mem0
+    rt 90
+    green-safe-move
+  ]
+end
+
 to goGreenExplorer
-;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 500)
   [ green-go-back-to-base ]
-  [ green-go-and-eat ]
-  
+  [ 
+    ifelse(mem4 = 2)
+    [
+      green-go-say-hello
+    ]
+    [green-go-and-eat ]
+  ]
   green-drive-harvesters
 
   ifelse (not green-no-target?) [
@@ -259,6 +345,7 @@ to goGreenRocketLauncher
   ifelse (energy < 500) or (nb-missiles = 0)
   [
     ;; rentre à la base si certaines conditions sont vérifiées
+    
     green-go-back-to-base
   ]
   [
@@ -275,34 +362,37 @@ to goGreenRocketLauncher
   ]
   
   ;; crée un nouveau missile si plus de 3000 unités d'énergie
-  if ((energy > 3000) and (nb-missiles < 5)) [ new-missile 1 ]
+  if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
 end
 
 to goGreenHarvester
-  ifelse (mem4 = 1) or (carrying-food? > 500) or (energy < 500)
-  [
-    ; retour à la base
+  ;; le harvester doit il back ? 
+  if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
+   ; retour à la base
     set mem4 1
-    
-    
-    
+    ;; détermine la base la plus proche
+    set mem1 min-one-of my-bases [ distance myself ]
+    ;; si l'ID mod 7 du harvester est 0, il rentre à la base la plus eloignée afin d'équilibrer un peu
+    if (Breed = Harvesters and who mod 7 = 0) [ 
+      set mem1 max-one-of my-bases [ distance myself ] 
+    ]
+  ]
+  ifelse (mem4 = 1) 
+  [
+   
     ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
     if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
       green-plant-seeds
     ]
     
     ;; rentre à la base si certaines conditions sont vérifiées
-    green-go-back-to-base
-    
-    
+    green-harvester-go-back-to-base
     if (energy > 500) and (carrying-food? > 500) [ 
       ;; détermine la distance de la base la plus proche
       if (min [ distance myself ] of my-bases < 10) [
         plant-seeds color max-seeds
       ]
     ]
-    
-    
   ]
   [
     ;; cherche à manger
@@ -313,16 +403,30 @@ end
 to goGreenBase
   set label energy
   if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
-  if (energy > 12000) [ ifelse (random 5 = 0) [ new-Explorer 1 self ][ifelse (random 2 = 0) [ new-Harvester 1 self ][ new-RocketLauncher 1 self ]]]
-  let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
-    if (t != nobody) [
-      if (random 10 = 0) [launch-rocket towards t]
+  if (energy > 12000) [ 
+    ifelse (random 5 = 0) 
+    [new-Explorer 1 self]
+    [
+      ifelse (random 2 = 0) 
+      [ new-Harvester 1 self ]
+      [ new-RocketLauncher 1 self ]
     ]
+  ]
+  let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
+  if (t != nobody) [
+    if (random 10 = 0) [launch-rocket towards t]
+  ]
 end
 
 ;; procedure pour initialiser les explorers verts
 to initGreenExplorer
   set mem0 [0 0]
+  ifelse (random 4 = 0)
+  [
+    set mem4 2 
+    green-init-target-explorer
+  ]
+  [set mem4 0]
 end
 
 ;; procedure pour initialiser les rocket-launchers verts
