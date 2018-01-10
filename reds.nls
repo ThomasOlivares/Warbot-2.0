@@ -78,8 +78,10 @@ end
 to durandil-go-back-to-base
   ;; détermine la base la plus proche
   let b min-one-of my-bases [ distance myself ]
-  ;; si le robot est arrivé à la base
-  ifelse (distance b <= 2)
+  if (b != nobody)
+  [
+    ;; si le robot est arrivé à la base
+    ifelse (distance b <= 2)
     [ 
       ;; dépose sa nourriture
       give-food b carrying-food?
@@ -104,13 +106,14 @@ to durandil-go-back-to-base
       ;; fait demi-tour
       rt 180
     ]
-  ;; sinon
+    ;; sinon
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 20 + random 40
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
+  ]
 end
 
 to durandil-go-and-eat
@@ -347,16 +350,51 @@ to durandil-go-say-hello
   ]
 end
 
+to goRedBase
+  set label energy
+  if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
+  if (energy > 12000) [ 
+    if (mem1 = 1)
+    [
+      new-RocketLauncher 1 self
+    ]
+    ifelse (random 5 = 0) 
+    [new-Explorer 1 self]
+    [
+      ifelse (random 2 = 0) 
+      [ new-Harvester 1 self ]
+      [ new-RocketLauncher 1 self ]
+    ]
+  ]
+  let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
+  if (t != nobody) [
+    if (random 10 = 0) [launch-rocket towards t]
+  ]
+  let nb count perceive-robots friend
+  if (nb > 20)
+  [
+    if (mem1 = 0)[print("trop d'unité")]
+    set mem1 1
+  ]
+  if (nb < 10)
+  [
+    if (mem1 = 1)[print("pas assez d'unité")]
+    set mem1 0
+  ]
+end
+
 to goRedExplorer
+  ;; si la base donne l'ordre de se désencombrer
+  ifelse (mem3 > 0 ) [
+    random-move
+    set mem3 ( mem3 - 1 )
+  ]
+  [
+;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 500)
   [ durandil-go-back-to-base ]
-  [ 
-    ifelse(mem4 = 2)
-    [
-      durandil-go-say-hello
-    ]
-    [durandil-go-and-eat ]
-  ]
+  [ durandil-go-and-eat ]
+  
   durandil-drive-harvesters
 
   ifelse (not durandil-no-target?) [
@@ -366,39 +404,48 @@ to goRedExplorer
   [ let h one-of perceive-robots2 ennemy1 ennemy2
     if ( h != nobody ) [ durandil-call-rocket-launcher-t h]
   ]
+  ]
 end
 
 to goRedRocketLauncher
+  ;; si la base donne l'ordre de se désencombrer
+  ifelse (mem3 > 0 ) [
+    random-move
+    set mem3 ( mem3 - 1 )
+  ]
+  [
 ;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 500) or (nb-missiles = 0)
   [
     ;; rentre à la base si certaines conditions sont vérifiées
+    
     durandil-go-back-to-base
   ]
   [
-    ifelse(mem4 = 2)
-    [
-      durandil-go-say-hello
-    ]
-    [
-      ;; sinon sélectionne une cible
-      durandil-select-target
-      ifelse (durandil-no-target?)
-      ;; si pas de cible, cherche à manger
-      [ durandil-go-and-eat ]
-      ;; sinon tire
-      [ 
-        durandil-shoot 
-        ;let dummy durandil-dodge
-      ]
+    ;; sinon sélectionne une cible
+    durandil-select-target
+    ifelse (durandil-no-target?)
+    ;; si pas de cible, cherche à manger
+    [ durandil-go-and-eat ]
+    ;; sinon tire
+    [ 
+      durandil-shoot 
+      ;let dummy durandil-dodge
     ]
   ]
   
   ;; crée un nouveau missile si plus de 3000 unités d'énergie
   if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
+  ]
 end
 
 to goRedHarvester
+  ;; si la base donne l'ordre de se désencombrer
+  ifelse (mem3 > 0 ) [
+    random-move
+    set mem3 ( mem3 - 1 )
+  ]
+  [
   ;; le harvester doit il back ? 
   if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
    ; retour à la base
@@ -438,35 +485,13 @@ to goRedHarvester
     ;; cherche à manger
     durandil-harvesters-go-and-eat
   ]
-end
-
-to goRedBase
-  set label energy
-  if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
-  if (energy > 12000) [ 
-    ifelse (random 5 = 0) 
-    [new-Explorer 1 self]
-    [
-      ifelse (random 2 = 0) 
-      [ new-Harvester 1 self ]
-      [ new-RocketLauncher 1 self ]
-    ]
-  ]
-  let t one-of perceive-specific-robots2 ennemy1 ennemy2 rocketlaunchers
-  if (t != nobody) [
-    if (random 10 = 0) [launch-rocket towards t]
   ]
 end
 
 ;; procedure pour initialiser les explorers verts
 to initRedExplorer
   set mem0 [0 0]
-  ifelse (random 4 = 0)
-  [
-    set mem4 2 
-    durandil-init-target-explorer
-  ]
-  [set mem4 0]
+  set mem4 0
 end
 
 ;; procedure pour initialiser les rocket-launchers verts

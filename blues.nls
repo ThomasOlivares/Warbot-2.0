@@ -47,70 +47,45 @@ to Blue-plant-seeds
   
 end
 
-to Blue-harvester-go-back-to-base
-   ;; détermine la base a atteindre
-  let b mem1
-  ;; si le robot est arrivé à la base
-  ifelse (distance b <= 2)
-    [ 
-      ;; dépose sa nourriture
-      give-food b carrying-food?
-      ;; demande de l'énergie si il reste moins de 1000
-      if (energy < 1000) [ Blue-ask-for-energy b 300 ]
-      ;; demande de l'énergie pour créer 5 missiles
-      
-      set mem4 0
-      ;; fait demi-tour
-      rt 180
-    ]
-  ;; sinon
-    [
-      ;; s'oriente vers la base avec un peu d'aléatoire
-      set heading towards b - 20 + random 40
-      ;; fait un demi tour si il y a du monde devant
-      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
-    ]
-end
-
-;;
-;; rentre à la base si le robot transporte plus de 1000 unités de nourriture ou si son énergie est inférieure à 500 ou si c'est un rocket-launcher qui n'a plus de missiles
-;;
-to Blue-go-back-to-base
+to blue-go-back-to-base
   ;; détermine la base la plus proche
   let b min-one-of my-bases [ distance myself ]
-  ;; si le robot est arrivé à la base
-  ifelse (distance b <= 2)
+  if (b != nobody)
+  [
+    ;; si le robot est arrivé à la base
+    ifelse (distance b <= 2)
     [ 
       ;; dépose sa nourriture
       give-food b carrying-food?
       ;; demande de l'énergie si il reste moins de 1000
-      if (energy < 1000) [ Blue-ask-for-energy b 300 ]
+      if (energy < 1000) [ blue-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
       if (Breed = RocketLaunchers) [
-        Blue-ask-for-energy b 500
+        blue-ask-for-energy b 500
         if (nb-missiles = 0)
         [
-          Blue-ask-for-energy b 50
+          blue-ask-for-energy b 50
           new-missile 50
         ]
         if (nb-fafs = 0)
         [
-          Blue-ask-for-energy b 250
+          blue-ask-for-energy b 250
           new-faf 5
         ]
       ]
-      if (mem4 = 2) [Blue-ask-for-energy b 1000]
+      if (mem4 = 2) [blue-ask-for-energy b 1000]
       if (mem4 != 2)[ set mem4 0 ]
       ;; fait demi-tour
       rt 180
     ]
-  ;; sinon
+    ;; sinon
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 20 + random 40
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
+  ]
 end
 
 to Blue-go-and-eat
@@ -140,6 +115,31 @@ to Blue-harvesters-go-and-eat
     ]
     [ random-move ]
   ]
+end
+
+to blue-harvester-go-back-to-base
+   ;; détermine la base a atteindre
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ blue-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
 end
 
 ;;
@@ -345,7 +345,6 @@ to goBlueRocketLauncher
   ifelse (energy < 500) or (nb-missiles = 0)
   [
     ;; rentre à la base si certaines conditions sont vérifiées
-    
     Blue-go-back-to-base
   ]
   [
@@ -379,14 +378,21 @@ to goBlueHarvester
   ]
   ifelse (mem4 = 1) 
   [
-   
+   ;; si la base de back a été détruite
+  if ( mem1 = nobody ) [ 
+    ;; détermine la base la plus proche
+    set mem1 min-one-of my-bases [ distance myself ]
+    if (Breed = Harvesters and who mod 7 = 0) [ 
+      set mem1 max-one-of my-bases [ distance myself ] 
+   ] 
+  ]
     ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
-    if (min [ distance myself ] of my-bases < 10) and (carrying-food? > 300) [ 
-      Blue-plant-seeds
+    if (distance mem1 < 10) and (carrying-food? > 300) [ 
+      blue-plant-seeds
     ]
     
     ;; rentre à la base si certaines conditions sont vérifiées
-    Blue-harvester-go-back-to-base
+    blue-harvester-go-back-to-base
     if (energy > 500) and (carrying-food? > 500) [ 
       ;; détermine la distance de la base la plus proche
       if (min [ distance myself ] of my-bases < 10) [
@@ -396,7 +402,7 @@ to goBlueHarvester
   ]
   [
     ;; cherche à manger
-    Blue-harvesters-go-and-eat
+    blue-harvesters-go-and-eat
   ]
 end
 

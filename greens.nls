@@ -47,39 +47,13 @@ to green-plant-seeds
   
 end
 
-to green-harvester-go-back-to-base
-   ;; détermine la base a atteindre
-  let b mem1
-  ;; si le robot est arrivé à la base
-  ifelse (distance b <= 2)
-    [ 
-      ;; dépose sa nourriture
-      give-food b carrying-food?
-      ;; demande de l'énergie si il reste moins de 1000
-      if (energy < 1000) [ green-ask-for-energy b 300 ]
-      ;; demande de l'énergie pour créer 5 missiles
-      
-      set mem4 0
-      ;; fait demi-tour
-      rt 180
-    ]
-  ;; sinon
-    [
-      ;; s'oriente vers la base avec un peu d'aléatoire
-      set heading towards b - 20 + random 40
-      ;; fait un demi tour si il y a du monde devant
-      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
-    ]
-end
-
-;;
-;; rentre à la base si le robot transporte plus de 1000 unités de nourriture ou si son énergie est inférieure à 500 ou si c'est un rocket-launcher qui n'a plus de missiles
-;;
 to green-go-back-to-base
   ;; détermine la base la plus proche
   let b min-one-of my-bases [ distance myself ]
-  ;; si le robot est arrivé à la base
-  ifelse (distance b <= 2)
+  if (b != nobody)
+  [
+    ;; si le robot est arrivé à la base
+    ifelse (distance b <= 2)
     [ 
       ;; dépose sa nourriture
       give-food b carrying-food?
@@ -104,13 +78,14 @@ to green-go-back-to-base
       ;; fait demi-tour
       rt 180
     ]
-  ;; sinon
+    ;; sinon
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 20 + random 40
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
+  ]
 end
 
 to green-go-and-eat
@@ -140,6 +115,31 @@ to green-harvesters-go-and-eat
     ]
     [ random-move ]
   ]
+end
+
+to green-harvester-go-back-to-base
+   ;; détermine la base a atteindre
+  let b mem1
+  ;; si le robot est arrivé à la base
+  ifelse (distance b <= 2)
+    [ 
+      ;; dépose sa nourriture
+      give-food b carrying-food?
+      ;; demande de l'énergie si il reste moins de 1000
+      if (energy < 1000) [ green-ask-for-energy b 300 ]
+      ;; demande de l'énergie pour créer 5 missiles
+      
+      set mem4 0
+      ;; fait demi-tour
+      rt 180
+    ]
+  ;; sinon
+    [
+      ;; s'oriente vers la base avec un peu d'aléatoire
+      set heading towards b - 20 + random 40
+      ;; fait un demi tour si il y a du monde devant
+      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+    ]
 end
 
 ;;
@@ -319,7 +319,7 @@ to green-go-say-hello
   ]
 end
 
-to goGreenExplorer
+to gogreenExplorer
   ifelse (energy < 500)
   [ green-go-back-to-base ]
   [ 
@@ -340,12 +340,11 @@ to goGreenExplorer
   ]
 end
 
-to goGreenRocketLauncher
+to gogreenRocketLauncher
 ;  ifelse (carrying-food? > 1000) or (energy < 500) or ((Breed = RocketLaunchers) and (nb-missiles = 0))
   ifelse (energy < 500) or (nb-missiles = 0)
   [
     ;; rentre à la base si certaines conditions sont vérifiées
-    
     green-go-back-to-base
   ]
   [
@@ -365,7 +364,7 @@ to goGreenRocketLauncher
   if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
 end
 
-to goGreenHarvester
+to gogreenHarvester
   ;; le harvester doit il back ? 
   if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
    ; retour à la base
@@ -407,7 +406,7 @@ to goGreenHarvester
   ]
 end
 
-to goGreenBase
+to gogreenBase
   set label energy
   if (nb-missiles < 10) and (energy > 1000) [ new-missile 50 ]
   if (energy > 12000) [ 
@@ -426,7 +425,7 @@ to goGreenBase
 end
 
 ;; procedure pour initialiser les explorers verts
-to initGreenExplorer
+to initgreenExplorer
   set mem0 [0 0]
   ifelse (random 4 = 0)
   [
@@ -437,17 +436,17 @@ to initGreenExplorer
 end
 
 ;; procedure pour initialiser les rocket-launchers verts
-to initGreenRocketLauncher
+to initgreenRocketLauncher
   set mem0 [0 0]
 end
 
 ;; procedure pour initialiser les harvesters verts
-to initGreenHarvester
+to initgreenHarvester
   set mem0 [0 0]
 end
 
 ;; procedure pour initialiser les bases verts
-to initGreenBase
+to initgreenBase
   set mem0 [0 0]
   ; cré des explorers, des harvesters et des rocket-launchers
   new-Explorer 2 self

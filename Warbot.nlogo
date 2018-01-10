@@ -284,9 +284,11 @@ to go
   ; reinitialise la liste des deplacements
   ask turtles [ set fd-ok? true ]
   ; si plus de bases rouges, victoire des verts
-  if not any? Bases with [ color = red ][ print "Victoire des verts" set victoire 1 game-over ]
+  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des verts" set victoire 1 game-over ]
   ; si plus de base verte, victoire des rouges
-  if not any? Bases with [ color = green ][ print "Victoire des rouges" set victoire 2 game-over ]
+  if ((not any? Bases with [ color = green ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des rouges" set victoire 2 game-over ]
+
+  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = green ]))[ print "Victoire des bleus" set victoire 1 game-over ]
 
   ; pour tous les explorers
   ask Explorers [
