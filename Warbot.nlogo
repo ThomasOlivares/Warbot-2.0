@@ -1352,7 +1352,7 @@ CHOOSER
 display?
 display?
 "none" "energy" "missiles" "carrying-food?" "mem0" "mem1" "mem2" "mem3" "mem4" "mem5"
-5
+0
 
 MONITOR
 107

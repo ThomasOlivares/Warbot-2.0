@@ -364,7 +364,7 @@ to gogreenRocketLauncher
   if ((energy > 1000) and (nb-missiles < 5)) [ new-missile 1 ]
 end
 
-to gogreenHarvester
+to goGreenHarvester
   ;; le harvester doit il back ? 
   if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
    ; retour à la base
@@ -384,13 +384,14 @@ to gogreenHarvester
     set mem1 min-one-of my-bases [ distance myself ]
     if (Breed = Harvesters and who mod 7 = 0) [ 
       set mem1 max-one-of my-bases [ distance myself ] 
-   ] 
+    ] 
   ]
-    ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
-    if (distance mem1 < 10) and (carrying-food? > 300) [ 
-      green-plant-seeds
+    if (mem1 != nobody)[
+      ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
+      if (distance mem1 < 10) and (carrying-food? > 300) [ 
+        green-plant-seeds
+      ]
     ]
-    
     ;; rentre à la base si certaines conditions sont vérifiées
     green-harvester-go-back-to-base
     if (energy > 500) and (carrying-food? > 500) [ 

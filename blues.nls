@@ -386,11 +386,12 @@ to goBlueHarvester
       set mem1 max-one-of my-bases [ distance myself ] 
    ] 
   ]
-    ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
-    if (distance mem1 < 10) and (carrying-food? > 300) [ 
-      blue-plant-seeds
+     if (mem1 != nobody)[
+      ;; si il est assez proche de la base, l'aléatoire augmente pour planter plus
+      if (distance mem1 < 10) and (carrying-food? > 300) [ 
+        blue-plant-seeds
+      ]
     ]
-    
     ;; rentre à la base si certaines conditions sont vérifiées
     blue-harvester-go-back-to-base
     if (energy > 500) and (carrying-food? > 500) [ 

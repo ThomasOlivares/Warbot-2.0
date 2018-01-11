@@ -40,7 +40,6 @@ to durandil-plant-seeds
       if ( who mod 7 = 1 or who mod 7 = 2 ) [ lt 30 ]
       if ( who mod 7 = 4 or who mod 7 = 5 ) [ rt 30 ]  
       
-     
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
@@ -75,16 +74,15 @@ end
 ;;
 ;; rentre à la base si le robot transporte plus de 1000 unités de nourriture ou si son énergie est inférieure à 500 ou si c'est un rocket-launcher qui n'a plus de missiles
 ;;
-to durandil-go-back-to-base
+to durandil-go-back-to-base-without-food
   ;; détermine la base la plus proche
   let b min-one-of my-bases [ distance myself ]
+  ; there is still one base
   if (b != nobody)
   [
     ;; si le robot est arrivé à la base
     ifelse (distance b <= 2)
     [ 
-      ;; dépose sa nourriture
-      give-food b carrying-food?
       ;; demande de l'énergie si il reste moins de 1000
       if (energy < 1000) [ durandil-ask-for-energy b 300 ]
       ;; demande de l'énergie pour créer 5 missiles
@@ -110,8 +108,7 @@ to durandil-go-back-to-base
     [
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 20 + random 40
-      ;; fait un demi tour si il y a du monde devant
-      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+      durandil-safe-move
     ]
   ]
 end
@@ -358,7 +355,7 @@ to goRedExplorer
   ]
   [
     ifelse (energy < 500)
-    [ durandil-go-back-to-base ]
+    [ durandil-go-back-to-base-without-food ]
     [durandil-go-and-eat ]
   
     durandil-drive-harvesters
@@ -383,7 +380,7 @@ to goRedRocketLauncher
     ifelse (energy < 500) or (nb-missiles = 0)
     [
       ;; rentre à la base si certaines conditions sont vérifiées
-      durandil-go-back-to-base
+      durandil-go-back-to-base-without-food
     ]
     [
       ifelse(mem4 = 2)
@@ -465,10 +462,11 @@ to goRedBase
     [
       new-RocketLauncher 1 self
     ]
-    ifelse (random 5 = 0) 
+    let r random 6
+    ifelse (r = 0) 
     [new-Explorer 1 self]
     [
-      ifelse (random 2 = 0) 
+      ifelse (r <= 3) 
       [ new-Harvester 1 self ]
       [ new-RocketLauncher 1 self ]
     ]
