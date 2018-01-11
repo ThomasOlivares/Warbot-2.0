@@ -21,6 +21,9 @@ to durandil-plant-seeds
   plant-seeds color max-seeds
   ;; détermine la base la plus proche
   let b mem1
+  if ( b = nobody ) [ set b min-one-of my-bases [ distance myself ] ]
+  ifelse ( b = nobody ) [ random-move ]
+  [
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
@@ -43,12 +46,15 @@ to durandil-plant-seeds
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
-  
+  ]
 end
 
 to durandil-harvester-go-back-to-base
    ;; détermine la base a atteindre
   let b mem1
+  if ( b = nobody ) [ set b min-one-of my-bases [ distance myself ] ]
+  ifelse ( b = nobody ) [ random-move ]
+  [
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
@@ -67,8 +73,9 @@ to durandil-harvester-go-back-to-base
       ;; s'oriente vers la base avec un peu d'aléatoire
       set heading towards b - 20 + random 40
       ;; fait un demi tour si il y a du monde devant
-      ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
+      durandil-safe-move
     ]
+  ]
 end
 
 ;;
@@ -152,6 +159,7 @@ to-report durandil-no-target?
 end
 
 to durandil-set-target-xy [ x y ]
+  set mem0 [0 0]
   set mem0 replace-item 0 mem0 x 
   set mem0 replace-item 1 mem0 y 
   set mem5 1
@@ -203,12 +211,10 @@ to durandil-select-target
     ;; il essaye de percevoir un robot ennemi (le plus proche de lui)
     let h min-one-of perceive-robots2 ennemy1 ennemy2 [ distance myself ]
     ;; si il en a vu un, il mémorise ses coordonnées et vérouille la cible
-    ifelse ( h != nobody ) [
+    if ( h != nobody ) [
       set mem0  h
       set mem5 2
     ]
-    ;; sinon, il se dévérouille
-    [ set mem5 0 ]
   ]
 end
 
@@ -235,7 +241,6 @@ to durandil-shoot
       ifelse (mem5 = 1)
       [ 
         launch-rocket towardsxy item 0 mem0 item 1 mem0 
-        set mem5 0 
       ]
       [ 
         ifelse ((nb-fafs > 0) and (waiting = 0) and (mem0 != nobody))
@@ -248,7 +253,6 @@ to durandil-shoot
             launch-rocket towards mem0
           ]
         ]
-        set mem5 0 
       ]
     ]
   ]
@@ -290,14 +294,136 @@ to durandil-init-target-explorer
     [set y -10]
     [set y 10]
   ]
-  set mem0 [0 0]
-  set mem0 replace-item 0 mem0 x 
-  set mem0 replace-item 1 mem0 y
+  if ([xcor] of one-of my-bases = -40)
+  [
+    ifelse (random 2 = 0)
+    [set x 0]
+    [set x 40]
+    ifelse (random 2 = 0)
+    [set y -10]
+    [set y 10]
+  ]
+  if ([xcor] of one-of my-bases = 40)
+  [
+    ifelse (random 2 = 0)
+    [set x -40]
+    [set x 0]
+    ifelse (random 2 = 0)
+    [set y -10]
+    [set y 10]
+  ]
+  durandil-set-target-xy x y
+end
+
+to durandil-update-target
+  let b one-of perceive-base ennemy1
+  if (b = nobody) [ set b one-of perceive-base ennemy2 ]
+  if (b != nobody)
+  [
+    durandil-set-target-t b
+  ]
+end
+
+to durandil-attack-xy [ x y ]
+  ; decide to go back if base destroyed
+  if (distancexy x y < 5)
+  [
+    let b one-of perceive-base ennemy1
+    if (b = nobody) [ set b one-of perceive-base ennemy2 ]
+    if (b = nobody) [ durandil-init-target-explorer ]
+  ]
+  
+  ; shooting
+  if ((distancexy x y <= 10) and (Breed = RocketLaunchers))
+  [ durandil-shoot ]
+  
+  if (distancexy x y > item 1 mem2)
+  [
+    set heading towardsxy x y
+    rt 20 - random 20
+    durandil-safe-move
+  ]
+  if (distancexy x y <= item 0 mem2)
+  [
+    set heading towardsxy x y
+    rt 135
+    rt 40 - random 80
+    durandil-safe-move
+  ]
+  if (distancexy x y > item 0 mem2 and distancexy x y <= item 1 mem2)
+  [
+    set heading towardsxy x y
+    rt 90
+    rt 20 - random 20
+    durandil-safe-move
+  ]
+end
+
+to durandil-attack-t [ t ]
+  ifelse (t = nobody)
+  [
+    durandil-init-target-explorer
+  ]
+  [
+    ; decide to go back if base destroyed
+    if (distance t < 5)
+    [
+      let b one-of perceive-base ennemy1
+      if (b = nobody) [ set b one-of perceive-base ennemy2 ]
+      if (b = nobody) [ durandil-init-target-explorer ]
+    ]
+  
+    ; shooting
+    if ((distance t <= 10) and (Breed = RocketLaunchers))
+    [ durandil-shoot ]
+  
+    if (distance t > item 1 mem2)
+    [
+      set heading towards t
+      rt 20 - random 20
+      durandil-safe-move
+    ]
+    if (distance t <= item 0 mem2)
+    [
+      set heading towards t
+      rt 135
+      rt 40 - random 80
+      durandil-safe-move
+    ]
+    if (distance t > item 0 mem2 and distance t <= item 1 mem2)
+    [
+      set heading towards t
+      rt 90
+      rt 20 - random 20
+      durandil-safe-move
+    ]
+  ]
+end
+
+to-report durandil-perceive-robots [ c customRange ]
+  if (customRange > detection-range ) [ set customRange detection-range ]
+  if (customRange < 1 ) [ set customRange 1 ]
+  report turtles in-radius customRange with [ (color = c) and ((breed = Explorers) or (breed = RocketLaunchers) or (breed = Harvesters))]
+end
+
+to durandil-tout-le-monde-dehors
+  
+  ask durandil-perceive-robots friend 5 [
+    set mem3 random 50 + 50
+  ]
+  ask durandil-perceive-robots friend 3 [
+    set mem3 random 30 + 40
+  ]
+  ask durandil-perceive-robots friend 1 [
+    set mem3 random 10 + 30
+  ]
+  
+  
 end
 
 ; the explorer go turn around the ennemy base
 to durandil-go-say-hello
-  set mem5 1
+  durandil-update-target
   set mem2 [0 0]
   if (Breed = RocketLaunchers)
   [
@@ -313,44 +439,22 @@ to durandil-go-say-hello
     set mem2 replace-item 1 mem2 10
   ]
   
-  ; decide to go back if base destroyed
-  if (distancexy item 0 mem0 item 1 mem0 < 5)
+  ifelse (mem5 = 1)
   [
-    let b one-of perceive-base ennemy1
-    if (b = nobody) [ set b one-of perceive-base ennemy2 ]
-    if (b = nobody) [ durandil-init-target-explorer ]
+    durandil-attack-xy item 0 mem0 item 1 mem0
   ]
-  
-  ; shooting
-  if ((distancexy item 0 mem0 item 1 mem0 <= 10) and (Breed = RocketLaunchers))
-  [ durandil-shoot ]
-  
-  if (distancexy item 0 mem0 item 1 mem0 > item 1 mem2)
   [
-    set heading towardsxy item 0 mem0 item 1 mem0
-    rt 20 - random 20
-    durandil-safe-move
-  ]
-  if (distancexy item 0 mem0 item 1 mem0 <= item 0 mem2)
-  [
-    set heading towardsxy item 0 mem0 item 1 mem0
-    rt 135
-    rt 40 - random 80
-    durandil-safe-move
-  ]
-  if (distancexy item 0 mem0 item 1 mem0 > item 0 mem2 and distancexy item 0 mem0 item 1 mem0 <= item 1 mem2)
-  [
-    set heading towardsxy item 0 mem0 item 1 mem0
-    rt 90
-    rt 20 - random 20
-    durandil-safe-move
+    durandil-attack-t mem0
   ]
 end
 
 to goRedExplorer
   ;; si la base donne l'ordre de se désencombrer
   ifelse (mem3 > 0 ) [
-    random-move
+    let b min-one-of my-bases [ distance myself ] 
+    set heading towards b 
+    lt 180
+    durandil-safe-move 
     set mem3 ( mem3 - 1 )
   ]
   [
@@ -373,7 +477,10 @@ end
 to goRedRocketLauncher
   ;; si la base donne l'ordre de se désencombrer
   ifelse (mem3 > 0 ) [
-    random-move
+    let b min-one-of my-bases [ distance myself ] 
+    set heading towards b 
+    lt 180
+    durandil-safe-move 
     set mem3 ( mem3 - 1 )
   ]
   [
@@ -406,9 +513,15 @@ to goRedRocketLauncher
 end
 
 to goRedHarvester
+  let ba min-one-of my-bases [ distance myself ] 
+  if (ba != nobody)
+  [
   ;; si la base donne l'ordre de se désencombrer
   ifelse (mem3 > 0 ) [
-    random-move
+    let b min-one-of my-bases [ distance myself ] 
+    set heading towards b 
+    lt 180
+    durandil-safe-move 
     set mem3 ( mem3 - 1 )
   ]
   [
@@ -452,6 +565,7 @@ to goRedHarvester
     durandil-harvesters-go-and-eat
   ]
   ]
+  ]
 end
 
 to goRedBase
@@ -475,15 +589,16 @@ to goRedBase
   if (t != nobody) [
     if (random 10 = 0) [launch-rocket towards t]
   ]
-  let nb count perceive-robots friend
-  if (nb > 20)
+  let nb count durandil-perceive-robots friend 5
+  if (nb > 25) and (mem1 = 0)
   [
-    if (mem1 = 0)[print ("trop d'unité")]
+    print ("trop d'unités")
     set mem1 1
+    durandil-tout-le-monde-dehors
   ]
-  if (nb < 10)
+  if (nb < 10) and (mem1 = 1)
   [
-    if (mem1 = 1)[print ("pas assez d'unité")]
+    print ("retour a la normale")
     set mem1 0
   ]
 end
@@ -501,6 +616,7 @@ end
 
 ;; procedure pour initialiser les rocket-launchers verts
 to initRedRocketLauncher
+  new-faf 3
   set mem0 [0 0]
   ifelse (random 1 = 0)
   [
@@ -508,7 +624,9 @@ to initRedRocketLauncher
     set mem5 1
     durandil-init-target-explorer
   ]
-  [set mem4 0]
+  [
+    set mem4 0
+  ]
 end
 
 ;; procedure pour initialiser les harvesters verts

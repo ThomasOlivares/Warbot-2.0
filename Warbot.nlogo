@@ -284,11 +284,11 @@ to go
   ; reinitialise la liste des deplacements
   ask turtles [ set fd-ok? true ]
   ; si plus de bases rouges, victoire des verts
-  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des verts" set victoire 1 game-over ]
+  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des verts" set victoire 1 stop ]
   ; si plus de base verte, victoire des rouges
-  if ((not any? Bases with [ color = green ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des rouges" set victoire 2 game-over ]
+  if ((not any? Bases with [ color = green ]) and (not any? Bases with [ color = blue ]))[ print "Victoire des rouges" set victoire 2 stop ]
 
-  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = green ]))[ print "Victoire des bleus" set victoire 1 game-over ]
+  if ((not any? Bases with [ color = red ]) and (not any? Bases with [ color = green ]))[ print "Victoire des bleus" set victoire 3 stop ]
 
   ; pour tous les explorers
   ask Explorers [
@@ -1351,8 +1351,8 @@ CHOOSER
 570
 display?
 display?
-"none" "energy" "missiles" "carrying-food?" "mem0" "mem1" "mem2" "mem3" "mem4" "mem5"
-0
+"none" "energy" "missiles" "fafs" "carrying-food?" "mem0" "mem1" "mem2" "mem3" "mem4" "mem5"
+1
 
 MONITOR
 107

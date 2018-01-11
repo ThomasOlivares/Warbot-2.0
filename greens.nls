@@ -21,6 +21,9 @@ to green-plant-seeds
   plant-seeds color max-seeds
   ;; détermine la base la plus proche
   let b mem1
+  if ( b = nobody ) [ set b min-one-of my-bases [ distance myself ] ]
+  ifelse ( b = nobody ) [ random-move ]
+  [
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
@@ -44,7 +47,7 @@ to green-plant-seeds
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
-  
+  ]
 end
 
 to green-go-back-to-base
@@ -120,6 +123,9 @@ end
 to green-harvester-go-back-to-base
    ;; détermine la base a atteindre
   let b mem1
+  if ( b = nobody ) [ set b min-one-of my-bases [ distance myself ] ]
+  ifelse ( b = nobody ) [ random-move ]
+  [
   ;; si le robot est arrivé à la base
   ifelse (distance b <= 2)
     [ 
@@ -140,6 +146,7 @@ to green-harvester-go-back-to-base
       ;; fait un demi tour si il y a du monde devant
       ifelse (free-ahead? speed = nobody)  [ forward-move speed ][ rt random 360 if (free-ahead? 2 = nobody) [ forward-move speed ]]
     ]
+  ]
 end
 
 ;;
@@ -365,6 +372,9 @@ to gogreenRocketLauncher
 end
 
 to goGreenHarvester
+  let ba min-one-of my-bases [ distance myself ] 
+  if (ba != nobody)
+  [
   ;; le harvester doit il back ? 
   if (mem4 != 1 and ( (carrying-food? > 500) or (energy < 500) ) )[
    ; retour à la base
@@ -404,6 +414,7 @@ to goGreenHarvester
   [
     ;; cherche à manger
     green-harvesters-go-and-eat
+  ]
   ]
 end
 
